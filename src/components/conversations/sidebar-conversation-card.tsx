@@ -481,48 +481,6 @@ export const SidebarConversationCard = memo(function SidebarConversationCard({
                     ) : null}
                   </button>
 
-                  {/* A permanent child count + toggle, independent of row hover.
-                  Keep the agent icon visible and do not select the parent when
-                  the user only wants to expand its child conversations. */}
-                  {hasChildren && onToggleExpand && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="xs"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onToggleExpand(conversation.id)
-                      }}
-                      aria-label={
-                        expanded
-                          ? t("collapseSubsessions")
-                          : t("expandSubsessions")
-                      }
-                      aria-expanded={expanded}
-                      aria-description={tSubsessions("trigger", {
-                        count: conversation.child_count,
-                      })}
-                      title={
-                        expanded
-                          ? t("collapseSubsessions")
-                          : t("expandSubsessions")
-                      }
-                      className="mr-1 h-7 shrink-0 px-1.5"
-                    >
-                      <span className="tabular-nums">
-                        {conversation.child_count}
-                      </span>
-                      <ChevronRight
-                        aria-hidden
-                        data-icon="inline-end"
-                        className={cn(
-                          "transition-transform duration-200 ease-out",
-                          expanded && "rotate-90"
-                        )}
-                      />
-                    </Button>
-                  )}
-
                   {/* Right slot: sizes to its content — the time / status badge
                   normally, the two quick-action buttons (pin, done) on hover —
                   so it never reserves more width than what is actually shown
@@ -647,6 +605,48 @@ export const SidebarConversationCard = memo(function SidebarConversationCard({
                       </div>
                     )}
                   </div>
+
+                  {/* Keep the child toggle at the right edge so hover actions
+                  cannot move it underneath the pointer. Expanding children does
+                  not select the parent conversation. */}
+                  {hasChildren && onToggleExpand && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="xs"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onToggleExpand(conversation.id)
+                      }}
+                      aria-label={
+                        expanded
+                          ? t("collapseSubsessions")
+                          : t("expandSubsessions")
+                      }
+                      aria-expanded={expanded}
+                      aria-description={tSubsessions("trigger", {
+                        count: conversation.child_count,
+                      })}
+                      title={
+                        expanded
+                          ? t("collapseSubsessions")
+                          : t("expandSubsessions")
+                      }
+                      className="mr-1 h-7 shrink-0 px-1.5"
+                    >
+                      <span className="tabular-nums">
+                        {conversation.child_count}
+                      </span>
+                      <ChevronRight
+                        aria-hidden
+                        data-icon="inline-end"
+                        className={cn(
+                          "transition-transform duration-200 ease-out",
+                          expanded && "rotate-90"
+                        )}
+                      />
+                    </Button>
+                  )}
                 </div>
               </div>
             </HoverCardTrigger>
