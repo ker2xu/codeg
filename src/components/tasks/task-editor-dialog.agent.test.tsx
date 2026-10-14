@@ -274,6 +274,20 @@ async function shownAgent(label: string) {
   )
 }
 
+/**
+ * Seed the memory the chat composer writes: the last mode / config options the
+ * user chose for an agent (`codeg:selector-prefs`).
+ */
+function seedSelections(
+  agentType: string,
+  prefs: { modeId?: string; configValues?: Record<string, string> }
+) {
+  localStorage.setItem(
+    "codeg:selector-prefs",
+    JSON.stringify({ [agentType]: prefs })
+  )
+}
+
 async function fillBrief(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText("Title"), "Polish the feature")
   await user.type(screen.getByLabelText("Task description"), "do it")
@@ -295,6 +309,9 @@ beforeEach(() => {
   inheritance.settingsConfig = {}
   inheritance.folderDefault = null
   templateSave.mockReset().mockResolvedValue(undefined)
+  // The editor now reads the user's last selector picks out of localStorage;
+  // one test's picks must not leak into the next.
+  localStorage.clear()
   probeSelections.bar = []
   probeSelections.composer = []
 })
@@ -447,6 +464,64 @@ describe("TaskEditorDialog agent", () => {
 
     const config = await saveBrief(user, onSubmit)
     expect(config.agent_type).toBe("claude_code")
+  })
+
+  it("a new task opens on the agent's last chosen mode and permissions", async () => {
+    // The memory the chat composer writes (and this editor now writes too):
+    // what the user last picked for this agent. A new task used to start on
+    // the agent's own defaults, so the same permission had to be re-picked on
+    // every single task.
+    seedSelections("codex", {
+      modeId: "plan",
+      configValues: { sandbox: "danger-full-access" },
+    })
+    inheritance.settingsAgent = "codex"
+    registry(agent("claude_code"), agent("codex"))
+    const user = userEvent.setup()
+    const onSubmit = renderEditor()
+    await shownAgent("Codex")
+
+    const latest = (renders: unknown[]) => renders[renders.length - 1]
+    await waitFor(() =>
+      expect(latest(probeSelections.bar)).toEqual({
+        sandbox: "danger-full-access",
+      })
+    )
+
+    const config = await saveBrief(user, onSubmit)
+    expect(config.mode_id).toBe("plan")
+    expect(config.config_values).toEqual({ sandbox: "danger-full-access" })
+  })
+
+  it("task settings' own mode and options still outrank the last choice", async () => {
+    // The settings are an explicit "always this" decision, so they win over
+    // the memory — key by key, not wholesale.
+    seedSelections("codex", {
+      modeId: "plan",
+      configValues: { model: "gpt-5-last", sandbox: "danger-full-access" },
+    })
+    inheritance.settingsAgent = "codex"
+    inheritance.settingsModeId = "auto"
+    inheritance.settingsConfig = { model: "gpt-5-pinned" }
+    registry(agent("claude_code"), agent("codex"))
+    const user = userEvent.setup()
+    const onSubmit = renderEditor()
+    await shownAgent("Codex")
+
+    const latest = (renders: unknown[]) => renders[renders.length - 1]
+    await waitFor(() =>
+      expect(latest(probeSelections.bar)).toEqual({
+        model: "gpt-5-pinned",
+        sandbox: "danger-full-access",
+      })
+    )
+
+    const config = await saveBrief(user, onSubmit)
+    expect(config.mode_id).toBe("auto")
+    expect(config.config_values).toEqual({
+      model: "gpt-5-pinned",
+      sandbox: "danger-full-access",
+    })
   })
 
   it("with no agent on show, nothing is saved in its name", async () => {
