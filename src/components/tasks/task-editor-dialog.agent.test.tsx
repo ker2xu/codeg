@@ -380,6 +380,32 @@ describe("TaskEditorDialog agent", () => {
     expect(onSubmit.mock.calls[0][0].config.agent_type).toBe("codex")
   })
 
+  it("does not apply remembered permissions when an existing task needs a substitute agent", async () => {
+    localStorage.setItem(
+      "codeg:selector-prefs",
+      JSON.stringify({
+        codex: {
+          modeId: "auto",
+          configValues: { sandbox: "danger-full-access" },
+        },
+      })
+    )
+    registry(agent("claude_code", { enabled: false }), agent("codex"))
+    const task = agentlessFailedTask()
+    task.config.agent_type = "claude_code"
+    task.config.mode_id = "plan"
+    task.config.config_values = { model: "opus" }
+    const user = userEvent.setup()
+    const onSubmit = renderEditor(task)
+    await shownAgent("Codex")
+
+    await user.click(screen.getByRole("button", { name: "Save" }))
+    await waitFor(() => expect(onSubmit).toHaveBeenCalled())
+    const config = onSubmit.mock.calls[0][0].config
+    expect(config.mode_id).toBeNull()
+    expect(config.config_values).toEqual({})
+  })
+
   it("an inherited agent that is disabled here: saves the substitute it shows", async () => {
     // Inheriting would launch Claude Code — the agent this device disabled,
     // and not the one the row presents as the pick.

@@ -489,7 +489,14 @@ function TaskEditorBody({
             // on an untouched pill is saved with the task.
             onFallback={(a) => {
               setAgentType(a)
-              seedSelectionsForAgent(a)
+              if (isCreate) {
+                seedSelectionsForAgent(a)
+              } else {
+                // Keep the existing fallback behavior; remembered selections
+                // seed new tasks, not a task the user is only editing.
+                setModeId(null)
+                setConfigValues({})
+              }
             }}
             onAgentsLoaded={(agents) =>
               setAgentShown(agents.some((a) => a.enabled && a.available))
