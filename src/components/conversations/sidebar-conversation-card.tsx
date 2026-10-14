@@ -222,6 +222,7 @@ export const SidebarConversationCard = memo(function SidebarConversationCard({
   onToggleExpand,
 }: SidebarConversationCardProps) {
   const t = useTranslations("Folder.conversationCard")
+  const tSubsessions = useTranslations("Folder.chat.subsessions")
   const ime = useImeGuard()
   const tSidebar = useTranslations("Folder.sidebar")
   const tStatus = useTranslations("Folder.statusLabels")
@@ -411,14 +412,7 @@ export const SidebarConversationCard = memo(function SidebarConversationCard({
                     />
                     <div
                       className={cn(
-                        "pointer-events-none absolute top-1/2 z-10 flex items-center justify-center",
-                        // With children, the row hover (or focus) swaps this agent
-                        // icon out for the expand chevron at the same spot — fade it
-                        // so the two cross-fade in place. On touch (no hover) the
-                        // chevron is always shown, so the icon is always hidden.
-                        hasChildren &&
-                          onToggleExpand &&
-                          "transition-opacity duration-150 group-hover:opacity-0 group-focus-within:opacity-0 [@media(hover:none)]:opacity-0"
+                        "pointer-events-none absolute top-1/2 z-10 flex items-center justify-center"
                       )}
                       style={{
                         left: "var(--conv-rail-axis, 0.875rem)",
@@ -487,16 +481,14 @@ export const SidebarConversationCard = memo(function SidebarConversationCard({
                     ) : null}
                   </button>
 
-                  {/* Expand/collapse affordance for delegation children. It overlays
-                  the agent icon at the rail axis: idle shows the icon, and
-                  hovering (or focusing) the row swaps in this chevron at the very
-                  same spot while the icon fades. A sibling of the row button (HTML
-                  forbids nested buttons) with `stopPropagation` so a toggle never
-                  selects the row; pointer events stay off until revealed so a
-                  click on the icon area still selects the row when not hovering. */}
+                  {/* A permanent child count + toggle, independent of row hover.
+                  Keep the agent icon visible and do not select the parent when
+                  the user only wants to expand its child conversations. */}
                   {hasChildren && onToggleExpand && (
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="xs"
                       onClick={(e) => {
                         e.stopPropagation()
                         onToggleExpand(conversation.id)
@@ -507,34 +499,28 @@ export const SidebarConversationCard = memo(function SidebarConversationCard({
                           : t("expandSubsessions")
                       }
                       aria-expanded={expanded}
+                      aria-description={tSubsessions("trigger", {
+                        count: conversation.child_count,
+                      })}
                       title={
                         expanded
                           ? t("collapseSubsessions")
                           : t("expandSubsessions")
                       }
-                      className={cn(
-                        "absolute top-0 bottom-0 z-20 flex items-center justify-center",
-                        "cursor-pointer outline-none",
-                        "opacity-0 pointer-events-none transition-opacity duration-150",
-                        "group-hover:opacity-100 group-hover:pointer-events-auto",
-                        "group-focus-within:opacity-100 group-focus-within:pointer-events-auto",
-                        "[@media(hover:none)]:opacity-100 [@media(hover:none)]:pointer-events-auto"
-                      )}
-                      style={{
-                        left: "var(--conv-rail-axis, 0.875rem)",
-                        width: "0.875rem",
-                        transform: "translateX(-50%)",
-                      }}
+                      className="mr-1 h-7 shrink-0 px-1.5"
                     >
+                      <span className="tabular-nums">
+                        {conversation.child_count}
+                      </span>
                       <ChevronRight
                         aria-hidden
+                        data-icon="inline-end"
                         className={cn(
-                          "h-3 w-3 shrink-0 text-muted-foreground/70",
                           "transition-transform duration-200 ease-out",
                           expanded && "rotate-90"
                         )}
                       />
-                    </button>
+                    </Button>
                   )}
 
                   {/* Right slot: sizes to its content — the time / status badge
