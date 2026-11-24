@@ -121,3 +121,11 @@ INSTA_UPDATE=auto cargo test --features test-utils     # 自动写新 .snap
 - ESLint：next/core-web-vitals + typescript + prettier
 - TypeScript：strict 模式，启用 `noUnusedLocals` 和 `noUnusedParameters`
 - Rust：2021 edition，使用 `thiserror` 定义错误类型
+
+## 并行开发：主干只读，分支各自一个 worktree
+
+- **主干只用于同步**：主 checkout 始终停在 `main`，开工前先 `git fetch upstream && git merge --ff-only upstream/main`（本仓库 fork 自 `spacering-net/codeg`，`upstream` 指向它）。不要在主 checkout 上提交、也不要反复切分支。
+- **一个 PR 一个仓库外目录**：每条待提交的分支（修 bug、加功能）都放在仓库之外的独立 worktree，例如 `../codeg-worktrees/<branch-slug>`。多个 PR 并行时，在同一个 checkout 上切分支会把别人的未提交改动混进自己的 commit，也会让两边的 `pnpm dev` / 测试互相踩。
+- 新建分支：`git worktree add -b <branch> ../codeg-worktrees/<slug> upstream/main`；接回既有分支：`git worktree add ../codeg-worktrees/<slug> <branch>`。每个 worktree 需要各自 `pnpm install`（pnpm store 共用，通常几十秒）。
+- 不要用 `git worktree move` 跨文件系统搬迁（如 `/tmp` → `$HOME`）：会报 `Invalid cross-device link`；只能 `git worktree remove` 后在新位置重新 `add`，且必须先确认该 worktree 干净。
+- **改 PR 描述走 REST**：`gh api -X PATCH repos/<owner>/<repo>/pulls/<n> --input body.json`（`{"body": "..."}`）。`gh pr edit` 可能被 Projects classic 的 GraphQL 弃用报错静默打断——退出码 0 但 body 未变，改完必须回读核对。
